@@ -2,47 +2,72 @@ package main
 
 import (
 	"fmt"
-	"math"
 	"math/big"
 	"os"
 	"strconv"
 )
 
-func check_mersenne(prime int64) bool {
-	mersenne := big.NewInt(int64(math.Pow(2, float64(prime))) - 1)
-
-	if !mersenne.ProbablyPrime(0) {
-		return false
-	}
-
-	return true
+func isPrime(n uint64) bool {
+	return new(big.Int).SetUint64(n).ProbablyPrime(20)
 }
 
-func is_mersenne(prime int64) bool {
-	if prime == 2 {
+func mersenneNumber(exponent uint64) *big.Int {
+	mersenne := new(big.Int).Lsh(big.NewInt(1), uint(exponent))
+	return mersenne.Sub(mersenne, big.NewInt(1))
+}
+
+func checkMersennePrime(exponent uint64) bool {
+	if exponent == 2 {
 		return true
 	}
 
-	if !big.NewInt(prime).ProbablyPrime(0) {
+	mersenne := mersenneNumber(exponent)
+	s := big.NewInt(4)
+
+	for i := uint64(0); i < exponent-2; i++ {
+		s.Mul(s, s)
+		s.Sub(s, big.NewInt(2))
+		s.Mod(s, mersenne)
+	}
+
+	return s.Sign() == 0
+}
+
+func isMersennePrimeExponent(exponent uint64) bool {
+	if exponent == 2 {
+		return true
+	}
+
+	if exponent < 2 || !isPrime(exponent) {
 		return false
 	}
 
-	return check_mersenne(prime)
+	return checkMersennePrime(exponent)
+}
+
+func usage() {
+	fmt.Fprintf(os.Stderr, "usage: %s EXPONENT\n", os.Args[0])
+	fmt.Fprintln(os.Stderr, "Checks whether 2^EXPONENT - 1 is a Mersenne prime.")
 }
 
 func main() {
-	number_to_check, err := strconv.Atoi(os.Args[1])
-
-	if err != nil {
-		fmt.Println(err)
-		os.Exit(-1)
+	if len(os.Args) != 2 {
+		usage()
+		os.Exit(2)
 	}
 
-	fmt.Print(number_to_check, " is ")
+	exponent, err := strconv.ParseUint(os.Args[1], 10, 64)
+	if err != nil {
+		fmt.Fprintln(os.Stderr, err)
+		usage()
+		os.Exit(2)
+	}
 
-	if check_mersenne(int64(number_to_check)) {
-		fmt.Println("a mersenne prime")
+	fmt.Printf("2^%d - 1 is ", exponent)
+
+	if isMersennePrimeExponent(exponent) {
+		fmt.Println("a Mersenne prime")
 	} else {
-		fmt.Println("NOT a mersenne prime")
+		fmt.Println("NOT a Mersenne prime")
 	}
 }
